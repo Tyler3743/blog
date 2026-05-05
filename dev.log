@@ -1,0 +1,13 @@
+
+> minimal-next-mongodb-blog@0.1.0 dev
+> next dev -p 3000
+
+   ▲ Next.js 15.5.15
+   - Local:        http://localhost:3000
+   - Network:      http://26.224.26.181:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 2.1s (540 modules)
+ GET / 200 in 2778ms
