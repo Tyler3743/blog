@@ -66,12 +66,11 @@ export default async function Home() {
   return (
     <main className="site-shell">
       <header className="site-header">
-        <h1>My Minimalist Blog</h1>
+        <h1>Optone</h1>
         <nav aria-label="Main navigation">
           <a href="/">Blog</a>
           <a href="#about">About Me</a>
           <a href="#why">Why I Write</a>
-          <a href="#travels">Travels</a>
           <a href="#contact">Contact</a>
         </nav>
       </header>
