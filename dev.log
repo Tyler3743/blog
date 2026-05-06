@@ -11,3 +11,10 @@
  ○ Compiling / ...
  ✓ Compiled / in 2.1s (540 modules)
  GET / 200 in 2778ms
+   Reload env: .env.local
+ ✓ Compiled in 550ms (213 modules)
+   Reload env: .env.local
+ ✓ Compiled in 132ms (213 modules)
+ ✓ Compiled in 123ms (213 modules)
+   Reload env: .env.local
+ ✓ Compiled in 247ms (213 modules)

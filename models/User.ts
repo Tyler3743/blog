@@ -13,14 +13,15 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    name: {
+    role: {
       type: String,
-      required: true,
+      enum: ["admin", "user"],
+      default: "user",
     },
   },
   {
-    timestamps: true,
-  },
+    timestamps: true
+  }
 );
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
