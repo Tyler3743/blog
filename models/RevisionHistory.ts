@@ -6,6 +6,14 @@ const revisionHistorySchema = new Schema({
     ref: "Post",
     required: true,
   },
+  oldTitle: {
+    type: String,
+    default: "",
+  },
+  newTitle: {
+    type: String,
+    default: "",
+  },
   oldContent: {
     type: String,
     required: true,
@@ -13,6 +21,10 @@ const revisionHistorySchema = new Schema({
   newContent: {
     type: String,
     required: true,
+  },
+  changedFields: {
+    type: [String],
+    default: [],
   },
   editedBy: {
     type: Schema.Types.ObjectId,

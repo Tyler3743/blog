@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
+import { RevisionHistory } from "@/models/RevisionHistory";
 import "@/models/User";
 
 export async function GET() {
@@ -13,7 +14,12 @@ export async function GET() {
       .populate("authorId", "email role")
       .lean();
 
-    return NextResponse.json({ posts });
+    const histories = await RevisionHistory.find()
+      .sort({ editedAt: -1 })
+      .populate("editedBy", "email role")
+      .lean();
+
+    return NextResponse.json({ posts, histories });
   } catch {
     return NextResponse.json(
       { message: "Không thể tải danh sách bài viết" },

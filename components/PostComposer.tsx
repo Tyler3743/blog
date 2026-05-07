@@ -39,6 +39,7 @@ export function PostComposer() {
       setTitle("");
       setContent("");
       setMessage("Post published");
+      window.dispatchEvent(new Event("posts:changed"));
       router.refresh();
     } catch {
       setMessage("Something went wrong");

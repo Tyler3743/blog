@@ -36,29 +36,50 @@ export async function PATCH(request: Request, context: RouteContext) {
   await connectMongo();
 
   const { id } = await context.params;
-  const body = await request.json();
+  const body = (await request.json()) as {
+    title?: string;
+    content?: string;
+    publishedAt?: string | null;
+  };
   const post = await Post.findById(id);
 
   if (!post) {
     return NextResponse.json({ message: "Post not found" }, { status: 404 });
   }
 
-  if (typeof body.content === "string" && body.content !== post.content) {
+  const nextTitle = typeof body.title === "string" ? body.title.trim() : post.title;
+  const nextContent = typeof body.content === "string" ? body.content.trim() : post.content;
+  const changedFields: string[] = [];
+
+  if (!nextTitle || !nextContent) {
+    return NextResponse.json(
+      { message: "Nhập đầy đủ tiêu đề và nội dung bài viết" },
+      { status: 400 }
+    );
+  }
+
+  if (nextTitle !== post.title) {
+    changedFields.push("title");
+  }
+
+  if (nextContent !== post.content) {
+    changedFields.push("content");
+  }
+
+  if (changedFields.length > 0) {
     await RevisionHistory.create({
       postId: post._id,
+      oldTitle: post.title,
+      newTitle: nextTitle,
       oldContent: post.content,
-      newContent: body.content,
+      newContent: nextContent,
+      changedFields,
       editedBy: authUser.userId,
     });
   }
 
-  if (typeof body.title === "string") {
-    post.title = body.title;
-  }
-
-  if (typeof body.content === "string") {
-    post.content = body.content;
-  }
+  post.title = nextTitle;
+  post.content = nextContent;
 
   if ("publishedAt" in body) {
     post.publishedAt = body.publishedAt;

@@ -1,31 +1,13 @@
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
+import { RevisionHistory } from "@/models/RevisionHistory";
 import "@/models/User";
 import { AuthAction } from "@/components/AuthAction";
+import { BlogFeed, type FeedPost, type FeedRevision } from "@/components/BlogFeed";
 import { PostComposer } from "@/components/PostComposer";
 
 export const dynamic = "force-dynamic";
-
-type LeanPost = {
-  _id: unknown;
-  title: string;
-  content: string;
-  publishedAt?: Date | string | null;
-  createdAt?: Date | string;
-};
-
-function formatDate(value?: Date | string | null) {
-  if (!value) {
-    return "Draft";
-  }
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
-}
 
 async function getOptionalUser() {
   try {
@@ -38,17 +20,23 @@ async function getOptionalUser() {
 export default async function HomePage() {
   await connectMongo();
 
-  const [authUser, posts] = await Promise.all([
+  const [authUser, posts, histories] = await Promise.all([
     getOptionalUser(),
     Post.find()
       .sort({ publishedAt: -1, createdAt: -1 })
       .populate("authorId", "email")
-      .lean<LeanPost[]>(),
+      .lean(),
+    RevisionHistory.find()
+      .sort({ editedAt: -1 })
+      .populate("editedBy", "email")
+      .lean(),
   ]);
 
   const isAdmin = authUser?.role === "admin";
-  const featuredPost = posts[0];
-  const archivePosts = posts.slice(1);
+  const serialized = JSON.parse(JSON.stringify({ posts, histories })) as {
+    posts: FeedPost[];
+    histories: FeedRevision[];
+  };
 
   return (
     <main className="site-shell">
@@ -70,48 +58,11 @@ export default async function HomePage() {
 
       {isAdmin && <PostComposer />}
 
-      {featuredPost ? (
-        <>
-          <section className="content-layout">
-            <article className="featured-post" id={`post-${String(featuredPost._id)}`}>
-              <h2>{featuredPost.title}</h2>
-              <div className="post-meta">
-                <time>{formatDate(featuredPost.publishedAt || featuredPost.createdAt)}</time>
-              </div>
-              <p>{featuredPost.content}</p>
-            </article>
-
-            <aside className="post-list">
-              <h2>Latest</h2>
-              <ul>
-                {posts.map((post) => (
-                  <li key={String(post._id)}>
-                    <a href={`#post-${String(post._id)}`}>{post.title}</a>
-                    <time>{formatDate(post.publishedAt || post.createdAt)}</time>
-                  </li>
-                ))}
-              </ul>
-            </aside>
-          </section>
-
-          {archivePosts.length > 0 && (
-            <section className="archive">
-              {archivePosts.map((post) => (
-                <article id={`post-${String(post._id)}`} key={String(post._id)}>
-                  <h2>{post.title}</h2>
-                  <time>{formatDate(post.publishedAt || post.createdAt)}</time>
-                  <p>{post.content}</p>
-                </article>
-              ))}
-            </section>
-          )}
-        </>
-      ) : (
-        <section className="empty-state">
-          <h2>No posts yet</h2>
-          <p>{isAdmin ? "Publish the first post above." : "Please check back later."}</p>
-        </section>
-      )}
+      <BlogFeed
+        initialPosts={serialized.posts}
+        initialHistories={serialized.histories}
+        isAdmin={isAdmin}
+      />
     </main>
   );
 }
