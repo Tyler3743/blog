@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -73,6 +74,19 @@ export default function LoginPage() {
 
         <button type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
+        </button>
+
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="google-login-button"
+          onClick={() => signIn("google", { redirectTo: "/" })}
+        >
+          <span aria-hidden="true">G</span>
+          Đăng nhập bằng Google
         </button>
       </form>
     </main>

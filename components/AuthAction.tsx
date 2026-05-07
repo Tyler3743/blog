@@ -1,22 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 type AuthActionProps = {
   isAdmin: boolean;
 };
 
 export function AuthAction({ isAdmin }: AuthActionProps) {
-  const router = useRouter();
-
   async function handleLogout() {
     await fetch("/api/logout", {
       method: "POST",
     });
 
-    router.push("/");
-    router.refresh();
+    await signOut({
+      redirectTo: "/",
+    });
   }
 
   if (!isAdmin) {

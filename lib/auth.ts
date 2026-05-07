@@ -1,5 +1,8 @@
 import { cookies } from "next/headers";
 import jwt, { type JwtPayload } from "jsonwebtoken";
+import { auth } from "@/auth";
+import { connectMongo } from "@/lib/mongodb";
+import { User } from "@/models/User";
 
 export type AuthUser = JwtPayload & {
   userId: string;
@@ -14,19 +17,37 @@ export async function getAuthUser() {
   }
 
   const token = (await cookies()).get("token")?.value;
-  if (!token) {
-    return null;
-  }
+  if (token) {
+    try {
+      const payload = jwt.verify(token, secret) as AuthUser;
 
-  try {
-    const payload = jwt.verify(token, secret) as AuthUser;
+      if (!payload.userId || !payload.email || payload.role !== "admin") {
+        return null;
+      }
 
-    if (!payload.userId || !payload.email || !payload.role) {
+      return payload;
+    } catch {
       return null;
     }
+  }
 
-    return payload;
-  } catch {
+  const session = await auth();
+  const email = session?.user?.email;
+
+  if (!email) {
     return null;
   }
+
+  await connectMongo();
+  const user = await User.findOne({ email: email.toLowerCase(), role: "admin" });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    userId: user.id.toString(),
+    email: user.email,
+    role: "admin",
+  };
 }

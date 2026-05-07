@@ -558,6 +558,42 @@ a {
   cursor: pointer;
 }
 
+.login-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  border-top: 1px solid #e5e5e5;
+}
+
+.login-form .google-login-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #d4d4d4;
+  background: white;
+  color: #111;
+}
+
+.google-login-button span {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #d4d4d4;
+  border-radius: 50%;
+  color: #4285f4;
+  font-weight: 700;
+}
+
 .login-form button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
