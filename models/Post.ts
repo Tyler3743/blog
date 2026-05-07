@@ -10,6 +10,7 @@ const postSchema = new Schema(
     content: {
       type: String,
       required: true,
+      trim: true,
     },
     authorId: {
       type: Schema.Types.ObjectId,

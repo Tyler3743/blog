@@ -1,61 +1,70 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
-import { User } from "@/models/User";
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken";
+import { getAuthUser } from "@/lib/auth";
+import { Post } from "@/models/Post";
+
+export async function GET() {
+  try {
+    await connectMongo();
+
+    const posts = await Post.find()
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .populate("authorId", "email role")
+      .lean();
+
+    return NextResponse.json({ posts });
+  } catch {
+    return NextResponse.json(
+      { message: "Không thể tải danh sách bài viết" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    await connectMongo();
-    const { email, password } = await request.json();
-    if (!email || !password) {
+    const authUser = await getAuthUser();
+    if (!authUser) {
       return NextResponse.json(
-        {
-          message: "Nhập đẩy đủ email và Password",
-        },
-        { status: 400 }
-      );
-    }
-    const user = await User.findOne({ email });
-    if (!user) {
-      return NextResponse.json(
-        { message: "Email hoặc mật khẩu sai" },
+        { message: "Bạn cần đăng nhập để đăng bài" },
         { status: 401 }
       );
     }
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
+
+    await connectMongo();
+
+    const { title, content, publishedAt } = (await request.json()) as {
+      title?: string;
+      content?: string;
+      publishedAt?: string | null;
+    };
+
+    if (!title?.trim() || !content?.trim()) {
       return NextResponse.json(
-        { message: "Sai emai hoặc mật khẩu" }
-      )
+        { message: "Nhập đầy đủ tiêu đề và nội dung bài viết" },
+        { status: 400 }
+      );
     }
-    const token = jwt.sign(
-      {
-        userId: user.id.toString(),
-        email: user.email,
-        role: user.role,
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "7d" }
-    );
-    const response = NextResponse.json({
-      message: "ok",
-      user: {
-        id: user.id.toString(),
-        email: user.email,
-        role: user.role,
-      },
+
+    const parsedPublishedAt = publishedAt ? new Date(publishedAt) : null;
+    if (parsedPublishedAt && Number.isNaN(parsedPublishedAt.getTime())) {
+      return NextResponse.json(
+        { message: "Ngày đăng không hợp lệ" },
+        { status: 400 }
+      );
+    }
+
+    const post = await Post.create({
+      title: title.trim(),
+      content: content.trim(),
+      authorId: authUser.userId,
+      publishedAt: parsedPublishedAt,
     });
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-    });
-    return response;
-  } catch (error) {
+
+    return NextResponse.json({ post }, { status: 201 });
+  } catch {
     return NextResponse.json(
-      { message: "Login fail" },
+      { message: "Không thể đăng bài" },
       { status: 500 }
     );
   }

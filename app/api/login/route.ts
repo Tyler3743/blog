@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 export async function POST(request: Request) {
@@ -25,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Email hoặc mật khẩu sai" }, { status: 401 });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = user.password === password;
     if (!isPasswordValid) {
       return NextResponse.json({ message: "Email hoặc mật khẩu sai" }, { status: 401 });
     }

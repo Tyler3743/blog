@@ -9,7 +9,7 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
-    passwordHash: {
+    password: {
       type: String,
       required: true,
     },
@@ -25,4 +25,4 @@ const userSchema = new Schema(
 );
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
-export const User = models.User || model("User", userSchema);
+export const User = models.User || model("User", userSchema, "user");

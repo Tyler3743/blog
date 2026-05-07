@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
+import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
 import { RevisionHistory } from "@/models/RevisionHistory";
 
@@ -23,6 +24,14 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const authUser = await getAuthUser();
+  if (!authUser) {
+    return NextResponse.json(
+      { message: "Bạn cần đăng nhập để sửa bài" },
+      { status: 401 }
+    );
+  }
+
   await connectMongo();
 
   const { id } = await context.params;
@@ -38,7 +47,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       postId: post._id,
       oldContent: post.content,
       newContent: body.content,
-      editedBy: body.editedBy,
+      editedBy: authUser.userId,
     });
   }
 
@@ -60,6 +69,14 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const authUser = await getAuthUser();
+  if (!authUser) {
+    return NextResponse.json(
+      { message: "Bạn cần đăng nhập để xóa bài" },
+      { status: 401 }
+    );
+  }
+
   await connectMongo();
 
   const { id } = await context.params;
