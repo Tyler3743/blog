@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
 import "@/models/User";
+import { AuthAction } from "@/components/AuthAction";
 import { PostComposer } from "@/components/PostComposer";
 
 export const dynamic = "force-dynamic";
@@ -55,8 +55,16 @@ export default async function HomePage() {
       <header className="site-header">
         <h1>My Minimalist Blog</h1>
         <nav>
-          <Link href="/">Home</Link>
-          {isAdmin ? <span>Admin: {authUser.email}</span> : <Link href="/login">Admin Login</Link>}
+          <span aria-hidden="true" />
+          <div className="nav-links">
+            <a href="/">Home</a>
+            <a href="/">About me</a>
+            <a href="/">Why I write</a>
+          </div>
+          <div className="nav-actions">
+            {isAdmin && <span className="admin-label">Admin: {authUser.email}</span>}
+            <AuthAction isAdmin={isAdmin} />
+          </div>
         </nav>
       </header>
 
