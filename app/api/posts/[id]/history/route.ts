@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { RevisionHistory } from "@/models/RevisionHistory";
+import "@/models/User";
 
 type RouteContext = {
   params: Promise<{

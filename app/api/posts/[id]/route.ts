@@ -3,6 +3,7 @@ import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
 import { RevisionHistory } from "@/models/RevisionHistory";
+import "@/models/User";
 
 type RouteContext = {
   params: Promise<{

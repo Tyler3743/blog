@@ -14,25 +14,38 @@ export async function POST(request: Request) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { message: "Nhập đầy đủ email và password" },
+        { message: "Nhap day du email va password" },
         { status: 400 }
       );
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return NextResponse.json({ message: "Email hoặc mật khẩu sai" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Email hoac mat khau sai" },
+        { status: 401 }
+      );
     }
 
     const isPasswordValid = user.password === password;
     if (!isPasswordValid) {
-      return NextResponse.json({ message: "Email hoặc mật khẩu sai" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Email hoac mat khau sai" },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== "admin") {
+      return NextResponse.json(
+        { message: "Chi admin moi duoc dang nhap" },
+        { status: 403 }
+      );
     }
 
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       return NextResponse.json(
-        { message: "Thiếu JWT_SECRET trong environment" },
+        { message: "Thieu JWT_SECRET trong environment" },
         { status: 500 }
       );
     }

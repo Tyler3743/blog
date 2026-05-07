@@ -180,6 +180,68 @@ a {
   margin-top: 14px;
 }
 
+.post-composer,
+.empty-state {
+  margin-top: 36px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 22px;
+}
+
+.post-composer {
+  display: grid;
+  gap: 14px;
+}
+
+.post-composer h2,
+.empty-state h2 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.post-composer label {
+  display: grid;
+  gap: 7px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}
+
+.post-composer input,
+.post-composer textarea {
+  width: 100%;
+  border: 1px solid #cfc7bf;
+  border-radius: 4px;
+  padding: 11px 12px;
+  font: 1rem Arial, Helvetica, sans-serif;
+}
+
+.post-composer textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.post-composer button {
+  width: fit-content;
+  border: 0;
+  background: var(--foreground);
+  color: var(--paper);
+  padding: 11px 18px;
+  font: 700 0.95rem Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+
+.post-composer button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-message,
+.empty-state p {
+  margin: 0;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 @media (max-width: 820px) {
   .site-shell {
     width: min(100% - 28px, 680px);

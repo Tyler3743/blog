@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
+import "@/models/User";
 
 export async function GET() {
   try {

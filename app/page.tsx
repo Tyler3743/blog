@@ -1,80 +1,109 @@
-"use client";
+import Link from "next/link";
+import { connectMongo } from "@/lib/mongodb";
+import { getAuthUser } from "@/lib/auth";
+import { Post } from "@/models/Post";
+import "@/models/User";
+import { PostComposer } from "@/components/PostComposer";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
-  const router = useRouter();
+type LeanPost = {
+  _id: unknown;
+  title: string;
+  content: string;
+  publishedAt?: Date | string | null;
+  createdAt?: Date | string;
+};
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    setError("");
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Login failed");
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
-    } catch {
-      setError("Something went wrong");
-    } finally {
-      setLoading(false);
-    }
+function formatDate(value?: Date | string | null) {
+  if (!value) {
+    return "Draft";
   }
 
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+async function getOptionalUser() {
+  try {
+    return await getAuthUser();
+  } catch {
+    return null;
+  }
+}
+
+export default async function HomePage() {
+  await connectMongo();
+
+  const [authUser, posts] = await Promise.all([
+    getOptionalUser(),
+    Post.find()
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .populate("authorId", "email")
+      .lean<LeanPost[]>(),
+  ]);
+
+  const isAdmin = authUser?.role === "admin";
+  const featuredPost = posts[0];
+  const archivePosts = posts.slice(1);
+
   return (
-    <main className="login-page">
-      <form className="login-form" onSubmit={handleSubmit}>
-        <h1>Admin Login</h1>
+    <main className="site-shell">
+      <header className="site-header">
+        <h1>My Minimalist Blog</h1>
+        <nav>
+          <Link href="/">Home</Link>
+          {isAdmin ? <span>Admin: {authUser.email}</span> : <Link href="/login">Admin Login</Link>}
+        </nav>
+      </header>
 
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="admin@example.com"
-            required
-          />
-        </label>
+      {isAdmin && <PostComposer />}
 
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter password"
-            required
-          />
-        </label>
+      {featuredPost ? (
+        <>
+          <section className="content-layout">
+            <article className="featured-post" id={`post-${String(featuredPost._id)}`}>
+              <h2>{featuredPost.title}</h2>
+              <div className="post-meta">
+                <time>{formatDate(featuredPost.publishedAt || featuredPost.createdAt)}</time>
+              </div>
+              <p>{featuredPost.content}</p>
+            </article>
 
-        {error && <p className="login-error">{error}</p>}
+            <aside className="post-list">
+              <h2>Latest</h2>
+              <ul>
+                {posts.map((post) => (
+                  <li key={String(post._id)}>
+                    <a href={`#post-${String(post._id)}`}>{post.title}</a>
+                    <time>{formatDate(post.publishedAt || post.createdAt)}</time>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          </section>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
+          {archivePosts.length > 0 && (
+            <section className="archive">
+              {archivePosts.map((post) => (
+                <article id={`post-${String(post._id)}`} key={String(post._id)}>
+                  <h2>{post.title}</h2>
+                  <time>{formatDate(post.publishedAt || post.createdAt)}</time>
+                  <p>{post.content}</p>
+                </article>
+              ))}
+            </section>
+          )}
+        </>
+      ) : (
+        <section className="empty-state">
+          <h2>No posts yet</h2>
+          <p>{isAdmin ? "Publish the first post above." : "Please check back later."}</p>
+        </section>
+      )}
     </main>
   );
 }
