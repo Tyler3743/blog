@@ -24,8 +24,6 @@ export function AuthAction({ isAdmin }: AuthActionProps) {
       <Link
         className="auth-icon-link"
         href="/login"
-        aria-label="Admin login"
-        title="Admin login"
       >
         <svg
           viewBox="0 0 24 24"

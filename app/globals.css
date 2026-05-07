@@ -349,12 +349,39 @@ a {
   margin-top: 14px;
 }
 
+.composer-toolbar,
 .post-composer,
 .empty-state {
   margin-top: 36px;
+}
+
+.post-composer,
+.empty-state {
   border: 1px solid var(--line);
   background: var(--paper);
   padding: 22px;
+}
+
+.composer-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.new-post-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: var(--foreground);
+  color: var(--paper);
+  padding: 11px 16px;
+  font: 700 0.95rem Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+
+.new-post-button span {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .post-composer {
@@ -362,10 +389,35 @@ a {
   gap: 14px;
 }
 
+.composer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .post-composer h2,
 .empty-state h2 {
   margin: 0;
   font-size: 1.45rem;
+}
+
+.composer-close {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.composer-close:hover {
+  color: var(--accent);
 }
 
 .post-composer label {

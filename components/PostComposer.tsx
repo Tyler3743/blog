@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 export function PostComposer() {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [message, setMessage] = useState("");
@@ -39,6 +40,7 @@ export function PostComposer() {
       setTitle("");
       setContent("");
       setMessage("Post published");
+      setIsOpen(false);
       window.dispatchEvent(new Event("posts:changed"));
       router.refresh();
     } catch {
@@ -48,9 +50,32 @@ export function PostComposer() {
     }
   }
 
+  if (!isOpen) {
+    return (
+      <section className="composer-toolbar" aria-label="Post actions">
+        <button type="button" className="new-post-button" onClick={() => setIsOpen(true)}>
+          <span aria-hidden="true">+</span>
+          New post
+        </button>
+      </section>
+    );
+  }
+
   return (
     <form className="post-composer" onSubmit={handleSubmit}>
-      <h2>New post</h2>
+      <div className="composer-heading">
+        <h2>New post</h2>
+        <button
+          type="button"
+          className="composer-close"
+          onClick={() => setIsOpen(false)}
+          disabled={loading}
+          aria-label="Close new post form"
+          title="Close"
+        >
+          ×
+        </button>
+      </div>
 
       <label>
         Title
