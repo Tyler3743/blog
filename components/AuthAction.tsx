@@ -21,22 +21,49 @@ export function AuthAction({ isAdmin }: AuthActionProps) {
 
   if (!isAdmin) {
     return (
-      <Link className="auth-icon-link" href="/login" aria-label="Admin login" title="Admin login">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M10 7V5a2 2 0 0 1 2-2h7v18h-7a2 2 0 0 1-2-2v-2" />
-          <path d="M3 12h11" />
-          <path d="m11 8 4 4-4 4" />
+      <Link
+        className="auth-icon-link"
+        href="/login"
+        aria-label="Admin login"
+        title="Admin login"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M14 5h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4" />
+          <path d="M11 8l4 4-4 4" />
+          <path d="M15 12H6" />
         </svg>
       </Link>
     );
   }
 
   return (
-    <button className="auth-icon-link" type="button" onClick={handleLogout} aria-label="Logout" title="Logout">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M14 7V5a2 2 0 0 0-2-2H5v18h7a2 2 0 0 0 2-2v-2" />
-        <path d="M21 12H10" />
-        <path d="m13 8-4 4 4 4" />
+    <button
+      className="auth-icon-link"
+      type="button"
+      onClick={handleLogout}
+      aria-label="Logout"
+      title="Logout"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
+        <path d="M13 8l4 4-4 4" />
+        <path d="M17 12H8" />
       </svg>
     </button>
   );
