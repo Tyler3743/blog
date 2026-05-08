@@ -40,15 +40,18 @@ export async function POST(request: Request) {
 
     await connectMongo();
 
-    const { title, content, publishedAt } = (await request.json()) as {
+    const { title, content, project, publishedAt } = (await request.json()) as {
       title?: string;
       content?: string;
+      project?: string;
       publishedAt?: string | null;
     };
 
-    if (!title?.trim() || !content?.trim()) {
+    const trimmedProject = project?.trim();
+
+    if (!title?.trim() || !content?.trim() || !trimmedProject) {
       return NextResponse.json(
-        { message: "Nhập đầy đủ tiêu đề và nội dung bài viết" },
+        { message: "Nhập đầy đủ tiêu đề và nội dung và project bài viết" },
         { status: 400 }
       );
     }
@@ -64,6 +67,7 @@ export async function POST(request: Request) {
     const post = await Post.create({
       title: title.trim(),
       content: content.trim(),
+      project: trimmedProject,
       authorId: authUser.userId,
       publishedAt: parsedPublishedAt,
     });

@@ -37,6 +37,9 @@ export default async function HomePage() {
     posts: FeedPost[];
     histories: FeedRevision[];
   };
+  const existingProjects = Array.from(
+    new Set(serialized.posts.map((post) => post.project?.trim()).filter(Boolean))
+  ) as string[];
 
   return (
     <main className="site-shell">
@@ -56,7 +59,7 @@ export default async function HomePage() {
         </nav>
       </header>
 
-      {isAdmin && <PostComposer />}
+      {isAdmin && <PostComposer existingProjects={existingProjects} />}
 
       <BlogFeed
         initialPosts={serialized.posts}

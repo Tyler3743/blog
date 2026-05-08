@@ -6,6 +6,7 @@ export type FeedPost = {
   _id: string;
   title: string;
   content: string;
+  project?: string;
   publishedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -199,6 +200,7 @@ function EditablePost({
           </div>
           <div className="post-meta">
             <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
+            {post.project && <span>{post.project}</span>}
           </div>
           <p>{post.content}</p>
         </>
@@ -250,6 +252,19 @@ export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedPr
     }, {});
   }, [histories]);
 
+  const postsByProject = useMemo(() => {
+    return posts.reduce<Record<string, FeedPost[]>>((result, post) => {
+      const projectName = post.project?.trim() || "No project";
+      result[projectName] ||= [];
+      result[projectName].push(post);
+      return result;
+    }, {});
+  }, [posts]);
+
+  const projectGroups = Object.entries(postsByProject).sort(([projectA], [projectB]) =>
+    projectA.localeCompare(projectB, "vi")
+  );
+
   const featuredPost = posts[0];
   const archivePosts = posts.slice(1);
 
@@ -273,16 +288,38 @@ export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedPr
           onSaved={refreshPosts}
         />
 
-        <aside className="post-list">
-          <h2>Latest</h2>
-          <ul>
-            {posts.map((post) => (
-              <li key={post._id}>
-                <a href={`#post-${post._id}`}>{post.title}</a>
-                <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
-              </li>
+        <aside className="sidebar-panels" aria-label="Post navigation">
+          <section className="post-list">
+            <h2>Latest</h2>
+            <ul>
+              {posts.map((post) => (
+                <li key={post._id}>
+                  <a href={`#post-${post._id}`}>{post.title}</a>
+                  <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="post-list project-list">
+            <h2>Projects</h2>
+            {projectGroups.map(([projectName, projectPosts]) => (
+              <div className="project-group" key={projectName}>
+                <h3>
+                  {projectName}
+                  <span>{projectPosts.length}</span>
+                </h3>
+                <ul>
+                  {projectPosts.map((post) => (
+                    <li key={post._id}>
+                      <a href={`#post-${post._id}`}>{post.title}</a>
+                      <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </section>
         </aside>
       </section>
 
