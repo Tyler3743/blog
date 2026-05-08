@@ -11,21 +11,9 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
-  await connectMongo();
-
-  const { id } = await context.params;
-  const post = await Post.findById(id).populate("authorId", "email role").lean();
-
-  if (!post) {
-    return NextResponse.json({ message: "Post not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ post });
-}
-
 export async function PATCH(request: Request, context: RouteContext) {
   const authUser = await getAuthUser();
+
   if (!authUser) {
     return NextResponse.json(
       { message: "Bạn cần đăng nhập để sửa bài" },
@@ -36,19 +24,39 @@ export async function PATCH(request: Request, context: RouteContext) {
   await connectMongo();
 
   const { id } = await context.params;
+
   const body = (await request.json()) as {
     title?: string;
     content?: string;
     publishedAt?: string | null;
   };
+
   const post = await Post.findById(id);
 
   if (!post) {
     return NextResponse.json({ message: "Post not found" }, { status: 404 });
   }
 
-  const nextTitle = typeof body.title === "string" ? body.title.trim() : post.title;
-  const nextContent = typeof body.content === "string" ? body.content.trim() : post.content;
+  if (!post.authorId) {
+    return NextResponse.json(
+      { message: "Bài viết này chưa có chủ sở hữu" },
+      { status: 403 }
+    );
+  }
+
+  if (post.authorId.toString() !== authUser.userId) {
+    return NextResponse.json(
+      { message: "Bạn chỉ được sửa bài viết của chính mình" },
+      { status: 403 }
+    );
+  }
+
+  const nextTitle =
+    typeof body.title === "string" ? body.title.trim() : post.title;
+
+  const nextContent =
+    typeof body.content === "string" ? body.content.trim() : post.content;
+
   const changedFields: string[] = [];
 
   if (!nextTitle || !nextContent) {
@@ -88,25 +96,4 @@ export async function PATCH(request: Request, context: RouteContext) {
   await post.save();
 
   return NextResponse.json({ post });
-}
-
-export async function DELETE(_request: Request, context: RouteContext) {
-  const authUser = await getAuthUser();
-  if (!authUser) {
-    return NextResponse.json(
-      { message: "Bạn cần đăng nhập để xóa bài" },
-      { status: 401 }
-    );
-  }
-
-  await connectMongo();
-
-  const { id } = await context.params;
-  const post = await Post.findByIdAndDelete(id);
-
-  if (!post) {
-    return NextResponse.json({ message: "Post not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ message: "Post deleted" });
 }
