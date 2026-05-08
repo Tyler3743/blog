@@ -9,17 +9,24 @@ async function findAdminByEmail(email?: string | null) {
   }
 
   await connectMongo();
+
   return User.findOne({
     email: email.toLowerCase(),
     role: "admin",
   });
 }
 
-export const { handlers, auth } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   pages: {
     signIn: "/login",
   },
-  providers: [Google],
+  providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
+  ],
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider !== "google") {
