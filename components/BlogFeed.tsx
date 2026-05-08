@@ -18,6 +18,10 @@ export type FeedPost = {
 export type FeedRevision = {
   _id: string;
   postId: string;
+  action?: "posted" | "updated";
+  title?: string;
+  content?: string;
+  project?: string;
   oldTitle?: string;
   newTitle?: string;
   oldContent: string;
@@ -32,8 +36,11 @@ export type FeedRevision = {
 type BlogFeedProps = {
   initialPosts: FeedPost[];
   initialHistories: FeedRevision[];
+  projects: string[];
   isAdmin: boolean;
 };
+
+const POSTS_PER_PAGE = 5;
 
 function formatDateTime(value?: string | null) {
   if (!value) {
@@ -58,6 +65,10 @@ function getPostId(revision: FeedRevision) {
 }
 
 function getChangedText(history: FeedRevision) {
+  if (history.action === "posted") {
+    return "Posted";
+  }
+
   const fields = history.changedFields || [];
 
   if (fields.length === 0) {
@@ -67,26 +78,80 @@ function getChangedText(history: FeedRevision) {
   return `Updated ${fields.join(" and ")}`;
 }
 
-function RevisionTimeline({ post, histories }: { post: FeedPost; histories: FeedRevision[] }) {
+function getRevisionTitle(history: FeedRevision) {
+  return history.title || history.newTitle || history.oldTitle || "Untitled";
+}
+
+function getRevisionContent(history: FeedRevision) {
+  return history.content || history.newContent || history.oldContent;
+}
+
+function RevisionTimeline({
+  post,
+  histories,
+  selectedRevisionId,
+  onSelectRevision,
+  onShowCurrent,
+}: {
+  post: FeedPost;
+  histories: FeedRevision[];
+  selectedRevisionId: string;
+  onSelectRevision: (revisionId: string) => void;
+  onShowCurrent: () => void;
+}) {
+  const hasPostedHistory = histories.some((history) => history.action === "posted");
+  const rows = hasPostedHistory
+    ? histories
+    : [
+        ...histories,
+        {
+          _id: "posted-current",
+          postId: post._id,
+          action: "posted" as const,
+          title: post.title,
+          content: post.content,
+          project: post.project,
+          oldContent: "",
+          newContent: post.content,
+          editedAt: post.publishedAt || post.createdAt,
+          editedBy: post.authorId,
+        },
+      ];
+
+  const sortedRows = [...rows].sort((left, right) => {
+    const leftTime = new Date(left.editedAt || 0).getTime();
+    const rightTime = new Date(right.editedAt || 0).getTime();
+
+    return rightTime - leftTime;
+  });
+
   return (
-    <section className="revision-timeline" aria-label={`Lịch sử của ${post.title}`}>
-      <h3>Activity</h3>
+    <section className="revision-timeline" aria-label={`Lich su cua ${post.title}`}>
+      <div className="timeline-heading">
+        <h3>Activity</h3>
+        {selectedRevisionId !== "current" && (
+          <button type="button" onClick={onShowCurrent}>
+            Current version
+          </button>
+        )}
+      </div>
       <ol>
-        <li>
-          <span>Posted by {post.authorId?.email || "unknown"}</span>
-          <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
-        </li>
-        {histories.map((history) => (
-          <li key={history._id}>
-            <span>
-              {getChangedText(history)} by {history.editedBy?.email || "unknown"}
-            </span>
-            {history.oldTitle && history.newTitle && history.oldTitle !== history.newTitle && (
-              <p className="revision-detail">
-                {history.oldTitle} {"->"} {history.newTitle}
-              </p>
-            )}
-            <time>{formatDateTime(history.editedAt)}</time>
+        {sortedRows.map((history) => (
+          <li
+            key={history._id}
+            className={selectedRevisionId === history._id ? "active-history" : undefined}
+          >
+            <button type="button" onClick={() => onSelectRevision(history._id)}>
+              <span>
+                {getChangedText(history)} by {history.editedBy?.email || "unknown"}
+              </span>
+              {history.oldTitle && history.newTitle && history.oldTitle !== history.newTitle && (
+                <span className="revision-detail">
+                  {history.oldTitle} {"->"} {history.newTitle}
+                </span>
+              )}
+              <time>{formatDateTime(history.editedAt)}</time>
+            </button>
           </li>
         ))}
       </ol>
@@ -98,27 +163,36 @@ function EditablePost({
   post,
   histories,
   isAdmin,
-  featured,
+  projects,
   onSaved,
 }: {
   post: FeedPost;
   histories: FeedRevision[];
   isAdmin: boolean;
-  featured?: boolean;
+  projects: string[];
   onSaved: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
+  const [project, setProject] = useState(post.project || "");
+  const [selectedRevisionId, setSelectedRevisionId] = useState("current");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSelectedRevisionId("current");
+    setEditing(false);
+    setMessage("");
+  }, [post._id]);
 
   useEffect(() => {
     if (!editing) {
       setTitle(post.title);
       setContent(post.content);
+      setProject(post.project || "");
     }
-  }, [editing, post.content, post.title]);
+  }, [editing, post.content, post.project, post.title]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,7 +206,7 @@ function EditablePost({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, project }),
       });
       const data = await response.json();
 
@@ -142,6 +216,7 @@ function EditablePost({
       }
 
       setEditing(false);
+      setSelectedRevisionId("current");
       onSaved();
     } catch {
       setMessage("Something went wrong");
@@ -150,10 +225,20 @@ function EditablePost({
     }
   }
 
-  const ArticleTag = featured ? "article" : "article";
+  const selectedRevision =
+    selectedRevisionId === "posted-current"
+      ? undefined
+      : histories.find((history) => history._id === selectedRevisionId);
+  const viewingHistory = selectedRevisionId !== "current";
+  const visibleTitle = selectedRevision ? getRevisionTitle(selectedRevision) : post.title;
+  const visibleContent = selectedRevision ? getRevisionContent(selectedRevision) : post.content;
+  const visibleProject = selectedRevision?.project || post.project;
+  const visibleDate = selectedRevision
+    ? selectedRevision.editedAt
+    : post.publishedAt || post.createdAt;
 
   return (
-    <ArticleTag className={featured ? "featured-post" : undefined} id={`post-${post._id}`}>
+    <article className="featured-post" id={`post-${post._id}`}>
       {editing ? (
         <form className="edit-post-form" onSubmit={handleSubmit}>
           <label>
@@ -169,6 +254,17 @@ function EditablePost({
               required
             />
           </label>
+          <label>
+            Project
+            <select value={project} onChange={(event) => setProject(event.target.value)} required>
+              <option value="">Select project</option>
+              {projects.map((projectName) => (
+                <option key={projectName} value={projectName}>
+                  {projectName}
+                </option>
+              ))}
+            </select>
+          </label>
           {message && <p className="form-message">{message}</p>}
           <div className="edit-actions">
             <button type="submit" disabled={saving}>
@@ -182,8 +278,8 @@ function EditablePost({
       ) : (
         <>
           <div className="article-heading">
-            <h2>{post.title}</h2>
-            {isAdmin && (
+            <h2>{visibleTitle}</h2>
+            {isAdmin && !viewingHistory && (
               <button
                 className="edit-icon-button"
                 type="button"
@@ -199,21 +295,34 @@ function EditablePost({
             )}
           </div>
           <div className="post-meta">
-            <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
-            {post.project && <span>{post.project}</span>}
+            <time>{formatDateTime(visibleDate)}</time>
+            {visibleProject && <span>{visibleProject}</span>}
+            {viewingHistory && <span>Activity snapshot</span>}
           </div>
-          <p>{post.content}</p>
+          <p>{visibleContent}</p>
         </>
       )}
 
-      <RevisionTimeline post={post} histories={histories} />
-    </ArticleTag>
+      <RevisionTimeline
+        post={post}
+        histories={histories}
+        selectedRevisionId={selectedRevisionId}
+        onSelectRevision={(revisionId) => {
+          setSelectedRevisionId(revisionId);
+          setEditing(false);
+        }}
+        onShowCurrent={() => setSelectedRevisionId("current")}
+      />
+    </article>
   );
 }
 
-export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedProps) {
+export function BlogFeed({ initialPosts, initialHistories, projects, isAdmin }: BlogFeedProps) {
   const [posts, setPosts] = useState(initialPosts);
   const [histories, setHistories] = useState(initialHistories);
+  const [selectedPostId, setSelectedPostId] = useState(initialPosts[0]?._id || "");
+  const [latestPage, setLatestPage] = useState(0);
+  const [projectPages, setProjectPages] = useState<Record<string, number>>({});
 
   async function refreshPosts() {
     const response = await fetch("/api/posts", {
@@ -243,6 +352,17 @@ export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedPr
     };
   }, []);
 
+  useEffect(() => {
+    if (posts.length === 0) {
+      setSelectedPostId("");
+      return;
+    }
+
+    if (!posts.some((post) => post._id === selectedPostId)) {
+      setSelectedPostId(posts[0]._id);
+    }
+  }, [posts, selectedPostId]);
+
   const historiesByPost = useMemo(() => {
     return histories.reduce<Record<string, FeedRevision[]>>((result, history) => {
       const postId = getPostId(history);
@@ -254,7 +374,11 @@ export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedPr
 
   const postsByProject = useMemo(() => {
     return posts.reduce<Record<string, FeedPost[]>>((result, post) => {
-      const projectName = post.project?.trim() || "No project";
+      const projectName = post.project?.trim();
+      if (!projectName) {
+        return result;
+      }
+
       result[projectName] ||= [];
       result[projectName].push(post);
       return result;
@@ -265,10 +389,15 @@ export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedPr
     projectA.localeCompare(projectB, "vi")
   );
 
-  const featuredPost = posts[0];
-  const archivePosts = posts.slice(1);
+  const selectedPost = posts.find((post) => post._id === selectedPostId) || posts[0];
+  const latestPageCount = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+  const safeLatestPage = Math.min(latestPage, latestPageCount - 1);
+  const latestPosts = posts.slice(
+    safeLatestPage * POSTS_PER_PAGE,
+    safeLatestPage * POSTS_PER_PAGE + POSTS_PER_PAGE
+  );
 
-  if (!featuredPost) {
+  if (!selectedPost) {
     return (
       <section className="empty-state">
         <h2>No posts yet</h2>
@@ -277,65 +406,150 @@ export function BlogFeed({ initialPosts, initialHistories, isAdmin }: BlogFeedPr
     );
   }
 
+  function selectPost(postId: string) {
+    setSelectedPostId(postId);
+    window.history.replaceState(null, "", `#post-${postId}`);
+  }
+
+  function changeProjectPage(projectName: string, direction: "previous" | "next") {
+    setProjectPages((currentPages) => {
+      const projectPostCount = postsByProject[projectName]?.length || 0;
+      const pageCount = Math.max(1, Math.ceil(projectPostCount / POSTS_PER_PAGE));
+      const currentPage = Math.min(currentPages[projectName] || 0, pageCount - 1);
+      const nextPage =
+        direction === "next"
+          ? Math.min(currentPage + 1, pageCount - 1)
+          : Math.max(currentPage - 1, 0);
+
+      return {
+        ...currentPages,
+        [projectName]: nextPage,
+      };
+    });
+  }
+
   return (
-    <>
-      <section className="content-layout">
-        <EditablePost
-          post={featuredPost}
-          histories={historiesByPost[featuredPost._id] || []}
-          isAdmin={isAdmin}
-          featured
-          onSaved={refreshPosts}
-        />
+    <section className="content-layout">
+      <EditablePost
+        key={selectedPost._id}
+        post={selectedPost}
+        histories={historiesByPost[selectedPost._id] || []}
+        isAdmin={isAdmin}
+        projects={projects}
+        onSaved={refreshPosts}
+      />
 
-        <aside className="sidebar-panels" aria-label="Post navigation">
-          <section className="post-list">
-            <h2>Latest</h2>
-            <ul>
-              {posts.map((post) => (
-                <li key={post._id}>
-                  <a href={`#post-${post._id}`}>{post.title}</a>
+      <aside className="sidebar-panels" aria-label="Post navigation">
+        <section className="post-list">
+          <h2>Latest</h2>
+          <ul>
+            {latestPosts.map((post) => (
+              <li key={post._id} className={post._id === selectedPost._id ? "active-post" : undefined}>
+                <button type="button" onClick={() => selectPost(post._id)}>
+                  <span>{post.title}</span>
                   <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
-                </li>
-              ))}
-            </ul>
-          </section>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {posts.length > POSTS_PER_PAGE && (
+            <div className="list-pagination" aria-label="Latest pagination">
+              <button
+                type="button"
+                onClick={() => setLatestPage((page) => Math.max(page - 1, 0))}
+                disabled={safeLatestPage === 0}
+              >
+                Previous
+              </button>
+              <span>
+                {safeLatestPage + 1}/{latestPageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLatestPage((page) => Math.min(page + 1, latestPageCount - 1))}
+                disabled={safeLatestPage === latestPageCount - 1}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </section>
 
-          <section className="post-list project-list">
+        {projectGroups.length > 0 && (
+          <section className="project-list" aria-label="Projects">
             <h2>Projects</h2>
             {projectGroups.map(([projectName, projectPosts]) => (
-              <div className="project-group" key={projectName}>
-                <h3>
-                  {projectName}
-                  <span>{projectPosts.length}</span>
-                </h3>
-                <ul>
-                  {projectPosts.map((post) => (
-                    <li key={post._id}>
-                      <a href={`#post-${post._id}`}>{post.title}</a>
-                      <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ProjectCard
+                key={projectName}
+                projectName={projectName}
+                posts={projectPosts}
+                selectedPostId={selectedPost._id}
+                page={projectPages[projectName] || 0}
+                onPrevious={() => changeProjectPage(projectName, "previous")}
+                onNext={() => changeProjectPage(projectName, "next")}
+                onSelectPost={selectPost}
+              />
             ))}
           </section>
-        </aside>
-      </section>
+        )}
+      </aside>
+    </section>
+  );
+}
 
-      {archivePosts.length > 0 && (
-        <section className="archive">
-          {archivePosts.map((post) => (
-            <EditablePost
-              key={post._id}
-              post={post}
-              histories={historiesByPost[post._id] || []}
-              isAdmin={isAdmin}
-              onSaved={refreshPosts}
-            />
-          ))}
-        </section>
+function ProjectCard({
+  projectName,
+  posts,
+  selectedPostId,
+  page,
+  onPrevious,
+  onNext,
+  onSelectPost,
+}: {
+  projectName: string;
+  posts: FeedPost[];
+  selectedPostId: string;
+  page: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  onSelectPost: (postId: string) => void;
+}) {
+  const pageCount = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const visiblePosts = posts.slice(
+    safePage * POSTS_PER_PAGE,
+    safePage * POSTS_PER_PAGE + POSTS_PER_PAGE
+  );
+
+  return (
+    <article className="project-card">
+      <h3>
+        {projectName}
+        <span>{posts.length}</span>
+      </h3>
+      <ul>
+        {visiblePosts.map((post) => (
+          <li key={post._id} className={post._id === selectedPostId ? "active-post" : undefined}>
+            <button type="button" onClick={() => onSelectPost(post._id)}>
+              <span>{post.title}</span>
+              <time>{formatDateTime(post.publishedAt || post.createdAt)}</time>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {posts.length > POSTS_PER_PAGE && (
+        <div className="list-pagination" aria-label={`${projectName} pagination`}>
+          <button type="button" onClick={onPrevious} disabled={safePage === 0}>
+            Previous
+          </button>
+          <span>
+            {safePage + 1}/{pageCount}
+          </span>
+          <button type="button" onClick={onNext} disabled={safePage === pageCount - 1}>
+            Next
+          </button>
+        </div>
       )}
-    </>
+    </article>
   );
 }

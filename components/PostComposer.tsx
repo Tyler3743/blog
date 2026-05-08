@@ -22,6 +22,7 @@ export function PostComposer({ existingProjects = [] }: PostComposerProps) {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [addingProject, setAddingProject] = useState(false);
 
   const projectOptions = useMemo(() => {
     const allProjects = [...existingProjects, ...localProjects];
@@ -35,7 +36,7 @@ export function PostComposer({ existingProjects = [] }: PostComposerProps) {
     );
   }, [existingProjects, localProjects]);
 
-  function handleAddProject() {
+  async function handleAddProject() {
     const trimmedProject = newProjectName.trim();
 
     if (!trimmedProject) {
@@ -43,18 +44,44 @@ export function PostComposer({ existingProjects = [] }: PostComposerProps) {
       return;
     }
 
-    setLocalProjects((currentProjects) => {
-      if (currentProjects.includes(trimmedProject)) {
-        return currentProjects;
+    setAddingProject(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: trimmedProject }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message || "Could not add project");
+        return;
       }
 
-      return [...currentProjects, trimmedProject];
-    });
+      const savedProjectName = data.project?.name || trimmedProject;
 
-    setProject(trimmedProject);
-    setNewProjectName("");
-    setShowNewProjectInput(false);
-    setMessage("");
+      setLocalProjects((currentProjects) => {
+        if (currentProjects.includes(savedProjectName)) {
+          return currentProjects;
+        }
+
+        return [...currentProjects, savedProjectName];
+      });
+
+      setProject(savedProjectName);
+      setNewProjectName("");
+      setShowNewProjectInput(false);
+      setMessage("");
+      router.refresh();
+    } catch {
+      setMessage("Something went wrong");
+    } finally {
+      setAddingProject(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -129,7 +156,7 @@ export function PostComposer({ existingProjects = [] }: PostComposerProps) {
           type="button"
           className="composer-close"
           onClick={() => setIsOpen(false)}
-          disabled={loading}
+          disabled={loading || addingProject}
           aria-label="Close new post form"
           title="Close"
         >
@@ -173,8 +200,8 @@ export function PostComposer({ existingProjects = [] }: PostComposerProps) {
           </label>
 
           <div className="edit-actions">
-            <button type="button" onClick={handleAddProject}>
-              Add project
+            <button type="button" onClick={handleAddProject} disabled={addingProject}>
+              {addingProject ? "Adding..." : "Add project"}
             </button>
 
             <button
@@ -184,6 +211,7 @@ export function PostComposer({ existingProjects = [] }: PostComposerProps) {
                 setNewProjectName("");
                 setMessage("");
               }}
+              disabled={addingProject}
             >
               Cancel
             </button>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
+import { Project } from "@/models/Project";
 import { RevisionHistory } from "@/models/RevisionHistory";
 import "@/models/User";
 
@@ -9,17 +10,19 @@ export async function GET() {
   try {
     await connectMongo();
 
-    const posts = await Post.find()
-      .sort({ publishedAt: -1, createdAt: -1 })
-      .populate("authorId", "email role")
-      .lean();
+    const [posts, histories, projects] = await Promise.all([
+      Post.find()
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .populate("authorId", "email role")
+        .lean(),
+      RevisionHistory.find()
+        .sort({ editedAt: -1 })
+        .populate("editedBy", "email role")
+        .lean(),
+      Project.find().sort({ name: 1 }).lean(),
+    ]);
 
-    const histories = await RevisionHistory.find()
-      .sort({ editedAt: -1 })
-      .populate("editedBy", "email role")
-      .lean();
-
-    return NextResponse.json({ posts, histories });
+    return NextResponse.json({ posts, histories, projects });
   } catch {
     return NextResponse.json(
       { message: "Không thể tải danh sách bài viết" },
@@ -64,12 +67,39 @@ export async function POST(request: Request) {
       );
     }
 
+    const projectDocument = await Project.findOneAndUpdate(
+      { name: trimmedProject },
+      {
+        $setOnInsert: {
+          name: trimmedProject,
+          createdBy: authUser.userId,
+        },
+      },
+      { new: true, upsert: true }
+    );
+
     const post = await Post.create({
       title: title.trim(),
       content: content.trim(),
-      project: trimmedProject,
+      project: projectDocument.name,
+      projectId: projectDocument._id,
       authorId: authUser.userId,
       publishedAt: parsedPublishedAt,
+    });
+
+    await RevisionHistory.create({
+      postId: post._id,
+      action: "posted",
+      title: post.title,
+      content: post.content,
+      project: post.project,
+      oldTitle: "",
+      newTitle: post.title,
+      oldContent: "",
+      newContent: post.content,
+      changedFields: ["post"],
+      editedBy: authUser.userId,
+      editedAt: post.publishedAt || post.createdAt,
     });
 
     return NextResponse.json({ post }, { status: 201 });

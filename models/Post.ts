@@ -12,10 +12,15 @@ const postSchema = new Schema(
       required: true,
       trim: true,
     },
-     project: {
+    project: {
       type: String,
       required: true,
       trim: true,
+    },
+    projectId: {
+      type: Schema.Types.ObjectId,
+      ref: "Project",
+      default: null,
     },
     authorId: {
       type: Schema.Types.ObjectId,
@@ -32,7 +37,8 @@ const postSchema = new Schema(
   },
 );
 
-postSchema.index({ project:1, publishedAt: -1, createdAt: -1 });
+postSchema.index({ project: 1, publishedAt: -1, createdAt: -1 });
+postSchema.index({ projectId: 1, publishedAt: -1, createdAt: -1 });
 
 export type PostDocument = InferSchemaType<typeof postSchema>;
 export const Post = models.Post || model("Post", postSchema);

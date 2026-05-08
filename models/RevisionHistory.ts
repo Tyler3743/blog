@@ -6,6 +6,24 @@ const revisionHistorySchema = new Schema({
     ref: "Post",
     required: true,
   },
+  action: {
+    type: String,
+    enum: ["posted", "updated"],
+    default: "updated",
+  },
+  title: {
+    type: String,
+    default: "",
+  },
+  content: {
+    type: String,
+    default: "",
+  },
+  project: {
+    type: String,
+    default: "",
+    trim: true,
+  },
   oldTitle: {
     type: String,
     default: "",
@@ -16,11 +34,11 @@ const revisionHistorySchema = new Schema({
   },
   oldContent: {
     type: String,
-    required: true,
+    default: "",
   },
   newContent: {
     type: String,
-    required: true,
+    default: "",
   },
   changedFields: {
     type: [String],
@@ -39,6 +57,7 @@ const revisionHistorySchema = new Schema({
 });
 
 revisionHistorySchema.index({ postId: 1, editedAt: -1 });
+revisionHistorySchema.index({ editedAt: -1 });
 
 export type RevisionHistoryDocument = InferSchemaType<typeof revisionHistorySchema>;
 export const RevisionHistory =

@@ -1,6 +1,7 @@
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
+import { Project } from "@/models/Project";
 import { RevisionHistory } from "@/models/RevisionHistory";
 import "@/models/User";
 import { AuthAction } from "@/components/AuthAction";
@@ -20,7 +21,7 @@ async function getOptionalUser() {
 export default async function HomePage() {
   await connectMongo();
 
-  const [authUser, posts, histories] = await Promise.all([
+  const [authUser, posts, histories, projects] = await Promise.all([
     getOptionalUser(),
     Post.find()
       .sort({ publishedAt: -1, createdAt: -1 })
@@ -30,15 +31,22 @@ export default async function HomePage() {
       .sort({ editedAt: -1 })
       .populate("editedBy", "email")
       .lean(),
+    Project.find().sort({ name: 1 }).lean(),
   ]);
 
   const isAdmin = authUser?.role === "admin";
-  const serialized = JSON.parse(JSON.stringify({ posts, histories })) as {
+  const serialized = JSON.parse(JSON.stringify({ posts, histories, projects })) as {
     posts: FeedPost[];
     histories: FeedRevision[];
+    projects: { _id: string; name: string }[];
   };
   const existingProjects = Array.from(
-    new Set(serialized.posts.map((post) => post.project?.trim()).filter(Boolean))
+    new Set(
+      [
+        ...serialized.projects.map((project) => project.name),
+        ...serialized.posts.map((post) => post.project?.trim()),
+      ].filter(Boolean)
+    )
   ) as string[];
 
   return (
@@ -64,6 +72,7 @@ export default async function HomePage() {
       <BlogFeed
         initialPosts={serialized.posts}
         initialHistories={serialized.histories}
+        projects={existingProjects}
         isAdmin={isAdmin}
       />
     </main>

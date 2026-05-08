@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Post } from "@/models/Post";
+import { Project } from "@/models/Project";
 import { RevisionHistory } from "@/models/RevisionHistory";
 import "@/models/User";
 
@@ -16,7 +17,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (!authUser) {
     return NextResponse.json(
-      { message: "Bạn cần đăng nhập để sửa bài" },
+      { message: "Ban can dang nhap de sua bai" },
       { status: 401 }
     );
   }
@@ -28,6 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const body = (await request.json()) as {
     title?: string;
     content?: string;
+    project?: string;
     publishedAt?: string | null;
   };
 
@@ -39,32 +41,33 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (!post.authorId) {
     return NextResponse.json(
-      { message: "Bài viết này chưa có chủ sở hữu" },
+      { message: "Bai viet nay chua co chu so huu" },
       { status: 403 }
     );
   }
 
   if (post.authorId.toString() !== authUser.userId) {
     return NextResponse.json(
-      { message: "Bạn chỉ được sửa bài viết của chính mình" },
+      { message: "Ban chi duoc sua bai viet cua chinh minh" },
       { status: 403 }
     );
   }
 
   const nextTitle =
     typeof body.title === "string" ? body.title.trim() : post.title;
-
   const nextContent =
     typeof body.content === "string" ? body.content.trim() : post.content;
+  const nextProject =
+    typeof body.project === "string" ? body.project.trim() : post.project;
 
-  const changedFields: string[] = [];
-
-  if (!nextTitle || !nextContent) {
+  if (!nextTitle || !nextContent || !nextProject) {
     return NextResponse.json(
-      { message: "Nhập đầy đủ tiêu đề và nội dung bài viết" },
+      { message: "Nhap day du tieu de, noi dung va project bai viet" },
       { status: 400 }
     );
   }
+
+  const changedFields: string[] = [];
 
   if (nextTitle !== post.title) {
     changedFields.push("title");
@@ -74,9 +77,31 @@ export async function PATCH(request: Request, context: RouteContext) {
     changedFields.push("content");
   }
 
+  if (nextProject !== post.project) {
+    changedFields.push("project");
+  }
+
+  const projectDocument =
+    nextProject !== post.project
+      ? await Project.findOneAndUpdate(
+          { name: nextProject },
+          {
+            $setOnInsert: {
+              name: nextProject,
+              createdBy: authUser.userId,
+            },
+          },
+          { new: true, upsert: true }
+        )
+      : null;
+
   if (changedFields.length > 0) {
     await RevisionHistory.create({
       postId: post._id,
+      action: "updated",
+      title: nextTitle,
+      content: nextContent,
+      project: nextProject,
       oldTitle: post.title,
       newTitle: nextTitle,
       oldContent: post.content,
@@ -88,6 +113,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   post.title = nextTitle;
   post.content = nextContent;
+  post.project = nextProject;
+
+  if (projectDocument) {
+    post.projectId = projectDocument._id;
+  }
 
   if ("publishedAt" in body) {
     post.publishedAt = body.publishedAt;
