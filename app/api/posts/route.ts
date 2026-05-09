@@ -13,11 +13,11 @@ export async function GET() {
     const [posts, histories, projects] = await Promise.all([
       Post.find()
         .sort({ publishedAt: -1, createdAt: -1 })
-        .populate("authorId", "email role")
+        .populate("authorId", "email name avatarUrl role")
         .lean(),
       RevisionHistory.find()
         .sort({ editedAt: -1 })
-        .populate("editedBy", "email role")
+        .populate("editedBy", "email name avatarUrl role")
         .lean(),
       Project.find().sort({ name: 1 }).lean(),
     ]);

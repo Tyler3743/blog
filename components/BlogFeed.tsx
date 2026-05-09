@@ -12,6 +12,8 @@ export type FeedPost = {
   updatedAt?: string;
   authorId?: {
     email?: string;
+    name?: string;
+    avatarUrl?: string;
   };
 };
 
@@ -30,6 +32,8 @@ export type FeedRevision = {
   editedAt?: string;
   editedBy?: {
     email?: string;
+    name?: string;
+    avatarUrl?: string;
   };
 };
 
@@ -84,6 +88,10 @@ function getRevisionTitle(history: FeedRevision) {
 
 function getRevisionContent(history: FeedRevision) {
   return history.content || history.newContent || history.oldContent;
+}
+
+function getDisplayName(user?: { email?: string; name?: string }) {
+  return user?.name || user?.email || "unknown";
 }
 
 function RevisionTimeline({
@@ -142,8 +150,18 @@ function RevisionTimeline({
             className={selectedRevisionId === history._id ? "active-history" : undefined}
           >
             <button type="button" onClick={() => onSelectRevision(history._id)}>
-              <span>
-                {getChangedText(history)} by {history.editedBy?.email || "unknown"}
+              <span className="revision-actor-row">
+                {history.editedBy?.avatarUrl && (
+                  <img
+                    src={history.editedBy.avatarUrl}
+                    alt={getDisplayName(history.editedBy)}
+                    className="revision-avatar"
+                  />
+                )}
+                <span>
+                  {getChangedText(history)} by{" "}
+                  <strong>{getDisplayName(history.editedBy)}</strong>
+                </span>
               </span>
               {history.oldTitle && history.newTitle && history.oldTitle !== history.newTitle && (
                 <span className="revision-detail">

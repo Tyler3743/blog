@@ -25,11 +25,11 @@ export default async function HomePage() {
     getOptionalUser(),
     Post.find()
       .sort({ publishedAt: -1, createdAt: -1 })
-      .populate("authorId", "email")
+      .populate("authorId", "email name avatarUrl")
       .lean(),
     RevisionHistory.find()
       .sort({ editedAt: -1 })
-      .populate("editedBy", "email")
+      .populate("editedBy", "email name avatarUrl")
       .lean(),
     Project.find().sort({ name: 1 }).lean(),
   ]);
@@ -61,7 +61,18 @@ export default async function HomePage() {
             <a href="/">Why I write</a>
           </div>
           <div className="nav-actions">
-            {isAdmin && <span className="admin-label">Admin: {authUser.email}</span>}
+            {isAdmin && (
+              <span className="admin-profile">
+                {authUser.avatarUrl && (
+                  <img
+                    src={authUser.avatarUrl}
+                    alt={authUser.name || authUser.email}
+                    className="admin-avatar"
+                  />
+                )}
+                <span className="admin-name">{authUser.name || authUser.email}</span>
+              </span>
+            )}
             <AuthAction isAdmin={isAdmin} />
           </div>
         </nav>

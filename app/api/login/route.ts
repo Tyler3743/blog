@@ -3,6 +3,15 @@ import { connectMongo } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import jwt from "jsonwebtoken";
 
+type LoginUser = {
+  _id: { toString(): string };
+  email: string;
+  password: string;
+  name?: string;
+  avatarUrl?: string;
+  role: "admin" | "user";
+};
+
 export async function POST(request: Request) {
   try {
     await connectMongo();
@@ -19,7 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).lean<LoginUser>();
     if (!user) {
       return NextResponse.json(
         { message: "Email hoac mat khau sai" },
@@ -52,8 +61,10 @@ export async function POST(request: Request) {
 
     const token = jwt.sign(
       {
-        userId: user.id.toString(),
+        userId: user._id.toString(),
         email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
         role: user.role,
       },
       secret,
@@ -63,8 +74,10 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       message: "ok",
       user: {
-        id: user.id.toString(),
+        id: user._id.toString(),
         email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
         role: user.role,
       },
     });

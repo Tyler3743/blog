@@ -3,6 +3,12 @@ import Google from "next-auth/providers/google";
 import { connectMongo } from "@/lib/mongodb";
 import { User } from "@/models/User";
 
+type AdminProfile = {
+  _id: { toString(): string };
+  name?: string;
+  avatarUrl?: string;
+};
+
 async function findAdminByEmail(email?: string | null) {
   if (!email) {
     return null;
@@ -13,7 +19,7 @@ async function findAdminByEmail(email?: string | null) {
   return User.findOne({
     email: email.toLowerCase(),
     role: "admin",
-  });
+  }).lean<AdminProfile>();
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -43,10 +49,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const sessionUser = session.user as typeof session.user & {
           id?: string;
           role?: "admin";
+          avatarUrl?: string;
         };
 
-        sessionUser.id = admin.id.toString();
+        sessionUser.id = admin._id.toString();
         sessionUser.role = "admin";
+        sessionUser.name = admin.name || sessionUser.name;
+        sessionUser.image = admin.avatarUrl || sessionUser.image;
+        sessionUser.avatarUrl = admin.avatarUrl;
       }
 
       return session;

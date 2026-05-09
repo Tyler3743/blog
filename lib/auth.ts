@@ -7,6 +7,16 @@ import { User } from "@/models/User";
 export type AuthUser = JwtPayload & {
   userId: string;
   email: string;
+  name?: string;
+  avatarUrl?: string;
+  role: "admin" | "user";
+};
+
+type AdminProfile = {
+  _id: { toString(): string };
+  email: string;
+  name?: string;
+  avatarUrl?: string;
   role: "admin" | "user";
 };
 
@@ -25,7 +35,20 @@ export async function getAuthUser() {
         return null;
       }
 
-      return payload;
+      await connectMongo();
+      const user = await User.findById(payload.userId).lean<AdminProfile>();
+
+      if (!user || user.role !== "admin") {
+        return null;
+      }
+
+      return {
+        userId: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        role: "admin",
+      };
     } catch {
       return null;
     }
@@ -39,15 +62,20 @@ export async function getAuthUser() {
   }
 
   await connectMongo();
-  const user = await User.findOne({ email: email.toLowerCase(), role: "admin" });
+  const user = await User.findOne({
+    email: email.toLowerCase(),
+    role: "admin",
+  }).lean<AdminProfile>();
 
   if (!user) {
     return null;
   }
 
   return {
-    userId: user.id.toString(),
+    userId: user._id.toString(),
     email: user.email,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
     role: "admin",
   };
 }

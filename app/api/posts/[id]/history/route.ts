@@ -15,7 +15,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   const history = await RevisionHistory.find({ postId: id })
     .sort({ editedAt: -1 })
-    .populate("editedBy", "email role")
+    .populate("editedBy", "email name avatarUrl role")
     .lean();
 
   return NextResponse.json({ history });

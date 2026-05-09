@@ -71,9 +71,30 @@ a {
   gap: 12px;
 }
 
-.admin-label {
+.admin-profile {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.admin-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper);
+}
+
+.admin-name {
   color: var(--muted);
   font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-header nav a,
@@ -316,6 +337,31 @@ a {
 
 .revision-timeline li.active-history button {
   color: var(--foreground);
+}
+
+.revision-actor-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revision-actor-row span {
+  min-width: 0;
+}
+
+.revision-actor-row strong {
+  font-weight: 700;
+}
+
+.revision-avatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper);
 }
 
 .revision-timeline time {
@@ -676,8 +722,8 @@ a {
     gap: 12px 22px;
   }
 
-  .admin-label {
-    display: none;
+  .admin-profile {
+    max-width: 180px;
   }
 
   .content-layout {
